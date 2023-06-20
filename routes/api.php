@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/customer', [CustomersController::class, 'index']);
 Route::get('/customer/{id}', [CustomersController::class, 'show']);
 Route::delete('/customer/{id}', [CustomersController::class, 'destroy']);
+Route::post('/customer', [CustomersController::class, 'store']);
 
 
 // invoices API 

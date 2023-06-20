@@ -38,7 +38,6 @@ class CustomersController extends Controller
             'last_name' => 'required',
             'email' => 'required',
             'phone_number' => 'required',
-            'address' => 'required',
         ]);
     }
 
