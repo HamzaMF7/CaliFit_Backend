@@ -17,4 +17,7 @@ class products extends Model
         'quantity',
         'image_url',
     ];
+    protected $casts = [
+        'image_url' => 'array',
+    ];
 }

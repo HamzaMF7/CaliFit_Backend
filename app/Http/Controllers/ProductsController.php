@@ -6,6 +6,7 @@ use App\Models\products;
 use App\Models\categories;
 use App\Http\Requests\StoreproductsRequest;
 use App\Http\Requests\UpdateproductsRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class ProductsController extends Controller
@@ -16,14 +17,6 @@ class ProductsController extends Controller
     public function index()
     {
         return products::all();
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
     }
 
     /**
@@ -40,16 +33,25 @@ class ProductsController extends Controller
         ]);
 
         $input = $request->all();
-        if ($request->hasFile('image_url')) {
-           
-            $image = $request->file('image_url');
-            $image_name = time() . $image->getClientOriginalName();
-            // Storage::putFileAs($destination_path, $image, $image_name);
-            $path = $image->storeAs('images', $image_name, 'public');
-            $input["image_url"] = $path;
-        }
 
-        return products::create($input);
+        // Find the category ID based on the category name
+        $category = categories::where('name', $input['category'])->first();
+        $categoryId = $category->id;
+        $input["category_id"] = $categoryId;
+
+        // Upload and store new images
+        if ($request->hasFile('image_url')) {
+            $imageUrls = [];
+            foreach ($request->file('image_url') as $image) {
+                $image_name = time() . $image->getClientOriginalName();
+                $path = $image->storeAs('images', $image_name, 'public');
+                $imageUrls[] = $path;
+            }
+            $input["image_url"] = $imageUrls;
+        }
+        // create product 
+        $product = products::create($input);
+        return response()->json(['message' => 'Product created successfully', 'product' => $product], 201);
     }
 
 
@@ -62,22 +64,43 @@ class ProductsController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(products $products)
-    {
-        //
-    }
-
-    /**
      * Update the specified resource in storage.
      */
+
+
     public function update(UpdateproductsRequest $request, string $id)
     {
         $product = products::find($id);
-        $product->update($request->all());
+
+        // Delete old images from storage
+        foreach ($product->image_url as $imageUrl) {
+            Storage::disk('public')->delete($imageUrl);
+        }
+
+        $input = $request->all();
+        
+        // Find the category ID based on the category name
+        $category = categories::where('name', $input['category'])->first();
+        $categoryId = $category->id;
+        $input["category_id"] = $categoryId;
+
+        // Upload and store new images
+        if ($request->hasFile('image_url')) {
+            $imageUrls = [];
+            foreach ($request->file('image_url') as $image) {
+                $image_name = time() . $image->getClientOriginalName();
+                $path = $image->storeAs('images', $image_name, 'public');
+                $imageUrls[] = $path;
+            }
+            $input["image_url"] = $imageUrls;
+        }
+
+        // Update product details
+        $product->update($input);
+
         return $product;
     }
+
     /**
      * Remove the specified resource from storage.
      */
@@ -101,7 +124,76 @@ class ProductsController extends Controller
         return response()->json($products);
     }
 
-    // get the image path
+        /**
+     * Update the quantity of the specified product in storage.
+     */
+    public function updateQuantity(Request $request, string $id)
+    {
+        $validatedData = $request->validate([
+            'itemAmount' => 'required|integer|min:0',
+        ]);
+
+        $amount = $validatedData['itemAmount'];
+
+        $product = Products::find($id);
+
+        if (!$product) {
+            return response()->json(['message' => 'Product not found'], 404);
+        }
+
+        $productQuantity = $product->quantity;
+
+        // Check if subtracting the amount would result in a negative quantity
+        if ($productQuantity - $amount < 0) {
+            return response()->json(['message' => 'Insufficient product quantity'], 400);
+        }
+
+        // Update the quantity field
+        $product->update([
+            'quantity' => $productQuantity - $amount,
+        ]);
+
+        return response()->json(['message' => 'Product quantity updated successfully']);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+    // public function getImage(string $id)
+    // {
+    //     $product = products::find($id);
+
+    //     $imageUrls = [];
+    //     foreach ($product->image_url as $imageUrl) {
+
+    //         Storage::delete('public/' . $imageUrl);
+    //         // $url = Storage::url($imageUrl);
+    //         // $imageUrls[] = $url;
+    //     }
+    //     // return response()->json([
+    //     //     'urls' => $imageUrls,
+    //     // ]);
+    // }
+
+        // if ($request->hasFile('image_url')) {
+
+        //     $image = $request->file('image_url');
+        //     $image_name = time() . $image->getClientOriginalName();
+        //     // Storage::putFileAs($destination_path, $image, $image_name);
+        //     $path = $image->storeAs('images', $image_name, 'public');
+        //     $input["image_url"] = $path;
+        // }
+
+            // get the image path
     // public function getImage($imgname)
     // {
     //     $path = 'images/' . $imgname;
@@ -110,17 +202,3 @@ class ProductsController extends Controller
 
     //     return response($img, 200)->header('Content-Type', $type);
     // }
-
-
-    public function getImage($imgname)
-    {
-        $path = 'images/' . $imgname;
-        $url = Storage::url($path);
-    
-        return response()->json([
-            'url' => $url,
-        ]);
-    }
-    
-
-}

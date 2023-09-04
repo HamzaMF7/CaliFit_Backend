@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('category');
             $table->unsignedBigInteger('category_id');
             $table->unsignedInteger('quantity')->default(0);
-            $table->string('image_url')->nullable();
+            $table->text('image_url')->nullable();
             $table->timestamps();
 
             $table->foreign('category_id')->references('id')->on('categories');
